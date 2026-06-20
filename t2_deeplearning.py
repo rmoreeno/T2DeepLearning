@@ -301,7 +301,7 @@ plotar_graficos(hist_custo, hist_ppl_t, hist_ppl_v, ppl_teste)
 
 # 10. geração de texto — análise qualitativa do modelo
 
-def gerar_texto(params, palavra_inicial, n_palavras=40, temperatura=0.8):
+def gerar_texto(params, palavra_inicial, n_palavras=40):
     h   = torch.zeros(1, HIDDEN_SIZE, device=device)
     c   = torch.zeros(1, HIDDEN_SIZE, device=device)
     idx = palavra2idx.get(palavra_inicial, unk_idx)
@@ -313,7 +313,6 @@ def gerar_texto(params, palavra_inicial, n_palavras=40, temperatura=0.8):
             hiddens, h, c = lstm_forward(inp, h, c, params)
 
             logits = hiddens[-1] @ params['E'].T + params['by']
-            logits = (logits - logits.max()) / temperatura
             probs  = torch.softmax(logits, dim=1).squeeze().cpu().numpy()
             idx    = np.random.choice(vocab_size, p=probs)
             gerado.append(idx2palavra[idx])
@@ -321,7 +320,4 @@ def gerar_texto(params, palavra_inicial, n_palavras=40, temperatura=0.8):
     return ' '.join(gerado)
 
 print('\n─── geração de texto ───')
-print('temperatura=0.8 (conservador):')
-print(gerar_texto(params, 'the', n_palavras=40, temperatura=0.8))
-print('\ntemperatura=1.2 (criativo):')
-print(gerar_texto(params, 'the', n_palavras=40, temperatura=1.2))
+print(gerar_texto(params, 'the', n_palavras=40))

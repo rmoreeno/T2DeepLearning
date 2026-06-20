@@ -4,6 +4,8 @@
 # =============================================================================
 # materiais p/ consultas:
 #   https://github.com/CaptainE/RNN-LSTM-in-numpy/blob/master/RNN_LSTM_from_scratch.ipynb
+#   https://christinakouridi.github.io/posts/implement-lstm/
+#   https://nimasarang.com/blog/2024-06-15-lstm-from-scratch/
 # =============================================================================
 
 import torch
@@ -415,7 +417,7 @@ plotar_graficos(hist_custo, hist_ppl_t, hist_ppl_v, ppl_teste, epoca_parada)
 #   4. amostra a próxima palavra das probabilidades 
 #   5. a palavra amostrada vira a entrada do próximo passo → repete
 
-def gerar_texto(params, palavra_inicial, n_palavras=50, temperatura=1.0):
+def gerar_texto(params, palavra_inicial, n_palavras=50):
     # estado inicial zerado — começa uma nova "frase" sem contexto anterior
     h1 = torch.zeros(1, HIDDEN_SIZE, device=device)
     c1 = torch.zeros(1, HIDDEN_SIZE, device=device)
@@ -436,12 +438,9 @@ def gerar_texto(params, palavra_inicial, n_palavras=50, temperatura=1.0):
             # weight tying: usa E para converter h_t em logits sobre o vocabulário
             logits = saidas[-1] @ params['E'].T + params['by']  # (1, vocab_size)
 
-            # aplica temperatura: ajusta o grau de criatividade da geração
-            logits = (logits - logits.max()) / temperatura   # subtrai max por estabilidade numérica
-
             # converte em probabilidades e garante soma exata = 1 (normaliza ruído numérico)
             probs = torch.softmax(logits, dim=1).squeeze().cpu().numpy()
-            probs = np.abs(probs) / np.abs(probs).sum()   # garante não-negatividade e soma 1
+            probs = np.abs(probs) / np.abs(probs).sum()
 
             # amostra a próxima palavra — multinomial: cada palavra com sua probabilidade
             idx   = np.random.choice(vocab_size, p=probs)
@@ -449,15 +448,5 @@ def gerar_texto(params, palavra_inicial, n_palavras=50, temperatura=1.0):
 
     return ' '.join(gerado)
 
-print('\n─── geração de texto amostral ───')
-print('temperatura=0.7 (conservador — prioriza as sequências mais prováveis):')
-print(gerar_texto(params, 'the', n_palavras=50, temperatura=0.7))
-
-print('\ntemperatura=1.0 (padrão — amostragem fiel ao modelo):')
-print(gerar_texto(params, 'the', n_palavras=50, temperatura=1.0))
-
-print('\ntemperatura=1.3 (criativo — distribui mais probabilidade pelas alternativas):')
-print(gerar_texto(params, 'the', n_palavras=50, temperatura=1.3))
-
-print('\ntemperatura=0.7 (iniciando com "a company"):')
-print(gerar_texto(params, 'a', n_palavras=50, temperatura=0.7))
+print('\n─── geração de texto ───')
+print(gerar_texto(params, 'the', n_palavras=50))

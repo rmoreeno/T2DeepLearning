@@ -8,6 +8,7 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 device = torch.device('cpu')
 
@@ -257,6 +258,7 @@ def treinar(ids_treino, ids_valid, params):
     melhor_epoca     = 0
 
     for epoca in range(1, EPOCHS + 1):
+        t0 = time.time()
         total_custo = 0.0
         h = torch.zeros(B, HIDDEN_SIZE, device=device)
         c = torch.zeros(B, HIDDEN_SIZE, device=device)
@@ -297,7 +299,8 @@ def treinar(ids_treino, ids_valid, params):
             sem_melhora += 1
             flag = f' (sem melhora: {sem_melhora}/{PATIENCE})'
 
-        print(f'época {epoca:2d}/{EPOCHS} | '
+        tempo = int(time.time() - t0)
+        print(f'época {epoca:2d}/{EPOCHS} | {tempo}s | '
               f'custo={custo_medio:.4f} | '
               f'ppl treino={ppl_treino:.1f} | '
               f'ppl valid={ppl_valid:.1f}{flag}')

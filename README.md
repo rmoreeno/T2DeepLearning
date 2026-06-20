@@ -90,25 +90,44 @@ O modelo possui uma camada LSTM com embedding e estado oculto de dimensão 256. 
 | Patience                 | 5 épocas sem melhora |
 | Embed / Hidden size      | 256                  |
 
+### Resultados por época
+
+| Época | Tempo | Custo  | PPL Treino | PPL Validação |
+| ----- | ----- | ------ | ---------- | ------------- |
+| 1     | 789s  | 6.0927 | 442.6      | 274.5         |
+| 2     | 668s  | 5.3862 | 218.4      | 202.0         |
+| 3     | 538s  | 5.0849 | 161.6      | 170.0         |
+| 4     | 475s  | 4.8749 | 131.0      | 153.1         |
+| 5     | 443s  | 4.7117 | 111.2      | 141.5         |
+| 6     | 431s  | 4.5771 | 97.2       | 135.0         |
+| 7     | 416s  | 4.4621 | 86.7       | 130.8         |
+| 8     | 424s  | 4.3620 | 78.4       | 128.1         |
+| 9     | 430s  | 4.2743 | 71.8       | 127.6         |
+| 10    | 461s  | 4.1940 | 66.3       | 127.3         |
+| 11    | 1422s | 4.1208 | 61.6       | 127.2         |
+| 12    | 1084s | 4.0530 | 57.6       | 128.2         |
+| 13    | 475s  | 3.9906 | 54.1       | 129.5         |
+| 14    | 390s  | 3.9324 | 51.0       | 131.4         |
+| 15    | 460s  | 3.8764 | 48.3       | 134.5         |
+| 16    | 631s  | 3.8234 | 45.8       | 136.6         |
+
 ### Métricas finais
 
-> Os resultados por época não foram salvos durante o treinamento — os valores abaixo foram extraídos do gráfico gerado ao final da execução.
-
-| Métrica                | Valor |
-| ---------------------- | ----- |
-| PPL Treino (época ~24) | ~75   |
-| PPL Validação (melhor) | ~131  |
-| PPL Teste              | 131.8 |
-| Melhor época           | 19    |
-| Época de parada        | ~24   |
+| Métrica                   | Valor  |
+| ------------------------- | ------ |
+| PPL Treino (melhor época) | 61.6   |
+| PPL Validação (melhor)    | 127.2  |
+| PPL Teste                 | 118.70 |
+| Melhor época              | 11     |
+| Época de parada           | 16     |
 
 ### Gráfico
 
-![Resultados Adam](resultados_lstm_adam.png)
+![Resultados Adam](resultados_lstm_adam2.png)
 
 ### Análise
 
-O Adam convergiu muito mais rápido nas primeiras épocas. O early stopping foi acionado por volta da época 24, restaurando os pesos da época 19. O gap crescente entre treino (~75) e validação (~131) é sinal de overfitting — sem dropout, o Adam acabou memorizando padrões do treino. O early stopping foi essencial para capturar o ponto ótimo antes da validação piorar.
+O Adam convergiu rapidamente nas primeiras épocas, a PPL de validação caiu de 274 para 127 em apenas 11 épocas. O early stopping foi acionado na época 16, restaurando os pesos da época 11. O gap crescente entre treino (61.6) e validação (127.2) é sinal de overfitting. O early stopping ajudou a capturar o ponto ótimo antes da validação piorar.
 
 ---
 
@@ -192,9 +211,9 @@ A PPL de validação melhorou monotonicamente em todas as 30 épocas, por isso o
 | Otimizador          | SGD + decaimento LR | Adam + early stop | SGD + decaimento LR                  |
 | Camadas LSTM        | 1                   | 1                 | 2                                    |
 | Dropout             | não                 | não               | p=0.35                               |
-| Épocas treinadas    | 15                  | ~24               | 30                                   |
-| PPL Treino final    | 183.4               | ~75               | 190.6                                |
-| PPL Validação final | 200.1               | ~131              | 174.7                                |
-| **PPL Teste**       | 192.30              | **131.8**         | 168.01                               |
+| Épocas treinadas    | 15                  | 16 (early stop)   | 30                                   |
+| PPL Treino final    | 183.4               | 61.6              | 190.6                                |
+| PPL Validação final | 200.1               | 127.2             | 174.7                                |
+| **PPL Teste**       | 192.30              | **118.70**        | 168.01                               |
 
-O Modelo 2 (Adam) obteve a melhor PPL de teste (131.8), com convergência mais rápida e early stopping evitando overfitting severo. O Modelo 3 (2 camadas + dropout) ficou em segundo (168.01), com regularização eficaz mas otimizador menos eficiente. O Modelo 1 (SGD base) serve como linha de base (192.30). Pode ser que uma boa combinação seria Adam + dropout + 2 camadas, mas não será possível a implementação neste trabalho devido ao tempo de execução.
+O Modelo 2 (Adam) obteve a melhor PPL de teste (118.70), com convergência muito rápida (atingiu o melhor ponto na época 11) e early stopping evitando overfitting severo. O Modelo 3 (2 camadas + dropout) ficou em segundo (168.01), com regularização eficaz mas otimizador menos eficiente. O Modelo 1 (SGD base) serve como linha de base (192.30). Uma possível combinação (analisando os cenários testados) seria Adam + dropout + 2 camadas, mas não foi implementada neste trabalho devido ao tempo de execução.
