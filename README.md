@@ -1,287 +1,200 @@
-# T1 — Arquitetura Básica de Redes Neurais
+# T2 — Modelo de Linguagem com LSTM
 
-**Disciplina:** GEX1083 - Tópicos Especiais em Computação XXXIII - Deep Learning  
-**Aluna:** Rafaela Moreno
+**Disciplina:** GEX1083 - Tópicos Especiais em Computação XXIII - Deep Learning  
+**Aluna:** Rafaela Moreno  
 **Instituição:** Universidade Federal da Fronteira Sul — Campus Chapecó
 
 ---
 
-## Descrição
+## Dataset — Penn Treebank (PTB)
 
-Este trabalho implementa uma Rede Neural Artificial (RNA) feedforward, treinada e avaliada no dataset MNIST,
-composto por imagens de dígitos manuscritos (0 a 9). Foram treinadas duas redes com arquiteturas diferentes para comparar
-o impacto do número de neurônios e do número de épocas nos resultados.
+O PTB é um corpus de texto jornalístico com ~10.000 palavras únicas no vocabulário. Palavras raras são substituídas por `<unk>`, números por `N` e fim de sentença por `<eos>`.
 
----
+- **929.589 tokens** de treino | **73.760** de validação | **82.430** de teste
 
-## Dataset — MNIST
-
-O dataset MNIST contém:
-
-- **60.000 exemplos** de treino
-- **10.000 exemplos** de teste
-- Cada exemplo é uma imagem **28x28 pixels** em escala de cinza
-- **10 classes** — dígitos de 0 a 9
-- Os pixels foram normalizados de [0, 255] para [0, 1] para
-  facilitar o aprendizado da rede
-- Os labels foram convertidos para one-hot encoding
+A métrica principal é a **perplexidade** = exp(cross-entropy média).
 
 ---
 
-## Rede 1
+## Modelo 1 — SGD com Decaimento de Learning Rate
 
-### Arquitetura
-
-| Camada   | Neurônios | Ativação   | Inicialização |
-| -------- | --------- | ---------- | ------------- |
-| Entrada  | 784       | Identidade | —             |
-| Hidden 1 | 128       | ReLU       | He            |
-| Hidden 2 | 64        | ReLU       | He            |
-| Saída    | 10        | Softmax    | Xavier        |
+O modelo possui uma camada LSTM com embedding e estado oculto de dimensão 128. A projeção de saída reutiliza a transposta do embedding (weight tying). O otimizador é SGD com decaimento de learning rate a partir da época 8. Não há dropout nem early stopping.
 
 ### Hiperparâmetros
 
-| Hiperparâmetro      | Valor                     |
-| ------------------- | ------------------------- |
-| Função de custo     | Categorical Cross-Entropy |
-| Otimizador          | SGD Mini-batch            |
-| Taxa de aprendizado | 0.05                      |
-| Tamanho do batch    | 64                        |
-| Épocas              | 30                        |
+| Hiperparâmetro           | Valor                         |
+| ------------------------ | ----------------------------- |
+| Função de custo          | Cross-Entropy                 |
+| Otimizador               | SGD Mini-batch                |
+| Taxa de aprendizado      | 1.0 (decai 0.8× após época 8) |
+| Tamanho do batch         | 32                            |
+| Comprimento da sequência | 35 tokens                     |
+| Épocas                   | 15                            |
+| Gradient clipping        | norma máxima 5.0              |
+| Embed / Hidden size      | 128                           |
 
 ### Resultados por época
 
-| Época | Custo Treino | Custo Teste | Acurácia |
-| ----- | ------------ | ----------- | -------- |
-| 1     | 0.4559       | 0.2616      | 92.59%   |
-| 2     | 0.2172       | 0.1844      | 94.57%   |
-| 3     | 0.1622       | 0.1519      | 95.58%   |
-| 4     | 0.1313       | 0.1311      | 95.94%   |
-| 5     | 0.1106       | 0.1124      | 96.56%   |
-| 6     | 0.0947       | 0.0990      | 97.05%   |
-| 7     | 0.0827       | 0.0942      | 97.18%   |
-| 8     | 0.0733       | 0.0860      | 97.42%   |
-| 9     | 0.0647       | 0.0965      | 97.03%   |
-| 10    | 0.0583       | 0.0842      | 97.41%   |
-| 11    | 0.0523       | 0.0781      | 97.53%   |
-| 12    | 0.0468       | 0.0842      | 97.46%   |
-| 13    | 0.0425       | 0.0772      | 97.55%   |
-| 14    | 0.0379       | 0.1098      | 96.33%   |
-| 15    | 0.0351       | 0.0815      | 97.35%   |
-| 16    | 0.0314       | 0.0782      | 97.68%   |
-| 17    | 0.0287       | 0.0775      | 97.68%   |
-| 18    | 0.0262       | 0.0784      | 97.67%   |
-| 19    | 0.0229       | 0.0791      | 97.59%   |
-| 20    | 0.0206       | 0.0780      | 97.80%   |
-| 21    | 0.0188       | 0.0857      | 97.49%   |
-| 22    | 0.0174       | 0.0810      | 97.72%   |
-| 23    | 0.0152       | 0.0790      | 97.76%   |
-| 24    | 0.0140       | 0.0830      | 97.66%   |
-| 25    | 0.0126       | 0.0782      | 97.86%   |
-| 26    | 0.0113       | 0.0788      | 97.82%   |
-| 27    | 0.0104       | 0.0795      | 97.79%   |
-| 28    | 0.0091       | 0.0818      | 97.76%   |
-| 29    | 0.0083       | 0.0817      | 97.82%   |
-| 30    | 0.0076       | 0.0836      | 97.81%   |
+| Época | Custo Treino | PPL Treino | PPL Validação |
+| ----- | ------------ | ---------- | ------------- |
+| 1     | 6.6315       | 758.6      | 563.7         |
+| 2     | 6.2259       | 505.7      | 449.2         |
+| 3     | 6.0111       | 407.9      | 372.7         |
+| 4     | 5.8358       | 342.4      | 329.0         |
+| 5     | 5.7046       | 300.2      | 295.9         |
+| 6     | 5.6004       | 270.5      | 272.9         |
+| 7     | 5.5138       | 248.1      | 253.5         |
+| 8     | 5.4402       | 230.5      | 238.3         |
+| 9     | 5.3748       | 215.9      | 226.1         |
+| 10    | 5.3274       | 205.9      | 217.9         |
+| 11    | 5.2916       | 198.7      | 212.1         |
+| 12    | 5.2640       | 193.2      | 207.7         |
+| 13    | 5.2423       | 189.1      | 204.5         |
+| 14    | 5.2253       | 185.9      | 202.0         |
+| 15    | 5.2119       | 183.4      | 200.1         |
 
 ### Métricas finais
 
-| Métrica                | Valor  |
-| ---------------------- | ------ |
-| Acurácia geral         | 97.81% |
-| Average Class Accuracy | 97.79% |
-| Perplexidade           | 1.0872 |
+| Métrica               | Valor  |
+| --------------------- | ------ |
+| PPL Treino (época 15) | 183.4  |
+| PPL Validação         | 200.1  |
+| PPL Teste             | 192.30 |
 
-### Métricas por classe
+### Gráfico
 
-| Classe    | Precisão   | Recall     | F1         |
-| --------- | ---------- | ---------- | ---------- |
-| 0         | 97.98%     | 98.88%     | 98.43%     |
-| 1         | 98.77%     | 99.21%     | 98.99%     |
-| 2         | 97.86%     | 97.67%     | 97.77%     |
-| 3         | 97.63%     | 98.02%     | 97.83%     |
-| 4         | 97.57%     | 98.07%     | 97.82%     |
-| 5         | 98.08%     | 97.31%     | 97.69%     |
-| 6         | 98.63%     | 97.81%     | 98.22%     |
-| 7         | 97.47%     | 97.28%     | 97.37%     |
-| 8         | 97.22%     | 96.82%     | 97.02%     |
-| 9         | 96.83%     | 96.83%     | 96.83%     |
-| **Média** | **97.80%** | **97.79%** | **97.80%** |
+![Resultados SGD](resultados_lstm.png)
 
-### Gráficos
+### Análise
 
-#### Curvas de Aprendizado
+A perplexidade caiu de forma consistente ao longo das 15 épocas. O gap entre treino (183) e validação (200) é pequeno, indicando boa generalização sem overfitting severo. A partir da época 8, o decaimento do learning rate acelerou a convergência. As curvas ainda estavam descendo na época 15, indicando que mais épocas poderiam melhorar o resultado.
 
-![Curvas de Aprendizado](imgs/rede1_curvas.png)
+---
 
-#### Avaliação Final
+## Modelo 2 — Adam com Early Stopping
 
-![Avaliação Final](imgs/rede1_avaliacao.png)
-
-### Análise dos resultados
-
-- A rede convergiu nas primeiras épocas, atingindo 97% de
-  acurácia já na época 6. A partir daí o aprendizado desacelerou e
-  estabilizou em torno de 97.8%. Talvez seja possível reduzir a
-  quantidade de épocas e ainda ter um bom resultado.
-
-- No gráfico de custo é possível ver que o custo de treino continuou
-  caindo até o final, mas o custo de teste parou de cair por volta
-  da época 10. Indica overfitting leve.
-
-- Na época 14 o custo de teste subiu para 0.1098 e a acurácia
-  caiu para 96.33%. Parece que o algoritmo andou na direção errada,
-  mas logo voltou ao normal.
-
-- A melhor classe foi o dígito 1 (F1: 98.99%), realmente tem traço simples e menor
-  variação de escrita.
-
-- A pior classe (mas não tão ruim) foi o dígito 9 (F1: 96.83%), confundido
-  com 4 (10 erros) e 7 (7 erros).
-
-- Acurácia geral (97.81%) e ACA (97.79%) são praticamente iguais,
-  devido ao balanceamento do dataset.
-
-- O valor da perplexidade (1.0872) está muito próximo de 1, indicando que o modelo
-  está confiante nas suas predições corretas.
-
-## Rede 2
-
-Foi escolhido aumentar os neurônios nas camadas e reduzir a quantidade de épocas para 20.
-Mante-se a mesma taxa de aprendizado e demais escolhas.
-
-### Arquitetura
-
-| Camada   | Neurônios | Ativação   | Inicialização |
-| -------- | --------- | ---------- | ------------- |
-| Entrada  | 784       | Identidade | —             |
-| Hidden 1 | 256       | ReLU       | He            |
-| Hidden 2 | 128       | ReLU       | He            |
-| Saída    | 10        | Softmax    | Xavier        |
+O modelo possui uma camada LSTM com embedding e estado oculto de dimensão 256. O otimizador é Adam implementado manualmente com acumuladores de primeiro e segundo momento. Early stopping com patience de 5 épocas monitora a PPL de validação e restaura os melhores pesos ao final. Não há dropout.
 
 ### Hiperparâmetros
 
-| Hiperparâmetro      | Valor                     |
-| ------------------- | ------------------------- |
-| Função de custo     | Categorical Cross-Entropy |
-| Otimizador          | SGD Mini-batch            |
-| Taxa de aprendizado | 0.05                      |
-| Tamanho do batch    | 64                        |
-| Épocas              | 20                        |
-
----
-
-### Resultados por época
-
-| Época | Custo Treino | Custo Teste | Acurácia |
-| ----- | ------------ | ----------- | -------- |
-| 1     | 0.4278       | 0.2550      | 92.60%   |
-| 2     | 0.2047       | 0.1709      | 94.94%   |
-| 3     | 0.1520       | 0.1377      | 95.80%   |
-| 4     | 0.1218       | 0.1190      | 96.42%   |
-| 5     | 0.1005       | 0.1000      | 96.91%   |
-| 6     | 0.0853       | 0.1046      | 96.64%   |
-| 7     | 0.0734       | 0.0923      | 97.00%   |
-| 8     | 0.0639       | 0.0824      | 97.44%   |
-| 9     | 0.0557       | 0.0934      | 96.89%   |
-| 10    | 0.0483       | 0.0764      | 97.53%   |
-| 11    | 0.0430       | 0.0746      | 97.58%   |
-| 12    | 0.0377       | 0.0814      | 97.39%   |
-| 13    | 0.0334       | 0.0686      | 97.78%   |
-| 14    | 0.0297       | 0.0688      | 97.72%   |
-| 15    | 0.0263       | 0.0697      | 97.66%   |
-| 16    | 0.0229       | 0.0674      | 97.86%   |
-| 17    | 0.0210       | 0.0729      | 97.61%   |
-| 18    | 0.0183       | 0.0698      | 97.82%   |
-| 19    | 0.0163       | 0.0696      | 97.87%   |
-| 20    | 0.0146       | 0.0661      | 97.87%   |
-
----
+| Hiperparâmetro           | Valor                |
+| ------------------------ | -------------------- |
+| Função de custo          | Cross-Entropy        |
+| Otimizador               | Adam                 |
+| Taxa de aprendizado      | 0.001                |
+| β1 / β2 / ε              | 0.9 / 0.999 / 1e-8   |
+| Tamanho do batch         | 32                   |
+| Comprimento da sequência | 35 tokens            |
+| Épocas (limite)          | 40 (early stopping)  |
+| Gradient clipping        | norma máxima 5.0     |
+| Patience                 | 5 épocas sem melhora |
+| Embed / Hidden size      | 256                  |
 
 ### Métricas finais
 
-| Métrica                | Valor  |
-| ---------------------- | ------ |
-| Acurácia geral         | 97.87% |
-| Average Class Accuracy | 97.86% |
-| Perplexidade           | 1.0683 |
+> Os resultados por época não foram salvos durante o treinamento — os valores abaixo foram extraídos do gráfico gerado ao final da execução.
 
-### Métricas por classe
+| Métrica                | Valor |
+| ---------------------- | ----- |
+| PPL Treino (época ~24) | ~75   |
+| PPL Validação (melhor) | ~131  |
+| PPL Teste              | 131.8 |
+| Melhor época           | 19    |
+| Época de parada        | ~24   |
 
-| Classe    | Precisão   | Recall     | F1         |
-| --------- | ---------- | ---------- | ---------- |
-| 0         | 97.97%     | 98.67%     | 98.32%     |
-| 1         | 99.12%     | 98.94%     | 99.03%     |
-| 2         | 97.39%     | 97.77%     | 97.58%     |
-| 3         | 97.22%     | 97.13%     | 97.18%     |
-| 4         | 98.87%     | 97.96%     | 98.41%     |
-| 5         | 97.43%     | 97.76%     | 97.59%     |
-| 6         | 98.64%     | 98.12%     | 98.38%     |
-| 7         | 97.68%     | 98.35%     | 98.01%     |
-| 8         | 96.83%     | 97.13%     | 96.98%     |
-| 9         | 97.41%     | 96.73%     | 97.07%     |
-| **Média** | **97.86%** | **97.86%** | **97.86%** |
+### Gráfico
+
+![Resultados Adam](resultados_lstm_adam.png)
+
+### Análise
+
+O Adam convergiu muito mais rápido nas primeiras épocas. O early stopping foi acionado por volta da época 24, restaurando os pesos da época 19. O gap crescente entre treino (~75) e validação (~131) é sinal de overfitting — sem dropout, o Adam acabou memorizando padrões do treino. O early stopping foi essencial para capturar o ponto ótimo antes da validação piorar.
 
 ---
 
-### Gráficos
+## Modelo 3 — LSTM 2 Camadas + Dropout + SGD com Decaimento
 
-#### Curvas de Aprendizado
+O modelo possui duas camadas LSTM empilhadas, com embedding e estado oculto de dimensão 128. Dropout de 35% é aplicado na entrada do embedding, entre as camadas LSTM e na saída da segunda camada. O otimizador é SGD com decaimento de learning rate a partir da época 8. O early stopping com patience de 4 não foi acionado.
 
-![Curvas de Aprendizado](imgs/rede2_curvas.png)
+### Hiperparâmetros
 
-#### Avaliação Final
+| Hiperparâmetro           | Valor                                    |
+| ------------------------ | ---------------------------------------- |
+| Função de custo          | Cross-Entropy                            |
+| Otimizador               | SGD Mini-batch                           |
+| Taxa de aprendizado      | 2.0 (decai 0.8× a partir da época 8)     |
+| Tamanho do batch         | 32                                       |
+| Comprimento da sequência | 35 tokens                                |
+| Épocas                   | 30                                       |
+| Gradient clipping        | norma máxima 5.0                         |
+| Dropout                  | p=0.35 (embedding, entre camadas, saída) |
+| Patience (early stop)    | 4 (não acionado)                         |
+| Embed / Hidden size      | 128                                      |
 
-![Avaliação Final](imgs/rede2_avaliacao.png)
+### Resultados por época
+
+| Época | Tempo | LR      | Custo  | PPL Treino | PPL Validação |
+| ----- | ----- | ------- | ------ | ---------- | ------------- |
+| 1     | 404s  | 2.00000 | 6.6735 | 791.2      | 597.5         |
+| 2     | 459s  | 2.00000 | 6.2671 | 526.9      | 408.2         |
+| 3     | 329s  | 2.00000 | 5.9792 | 395.1      | 328.8         |
+| 4     | 518s  | 2.00000 | 5.7985 | 329.8      | 279.7         |
+| 5     | 429s  | 2.00000 | 5.6786 | 292.5      | 253.2         |
+| 6     | 296s  | 2.00000 | 5.5872 | 267.0      | 234.4         |
+| 7     | 355s  | 2.00000 | 5.5134 | 248.0      | 218.9         |
+| 8     | 239s  | 1.60000 | 5.4508 | 232.9      | 208.6         |
+| 9     | 276s  | 1.28000 | 5.4050 | 222.5      | 199.9         |
+| 10    | 250s  | 1.02400 | 5.3711 | 215.1      | 193.9         |
+| 11    | 252s  | 0.81920 | 5.3451 | 209.6      | 189.7         |
+| 12    | 281s  | 0.65536 | 5.3249 | 205.4      | 186.9         |
+| 13    | 305s  | 0.52429 | 5.3095 | 202.3      | 184.5         |
+| 14    | 272s  | 0.41943 | 5.2979 | 199.9      | 182.4         |
+| 15    | 266s  | 0.33554 | 5.2873 | 197.8      | 180.5         |
+| 16    | 268s  | 0.26844 | 5.2795 | 196.3      | 179.4         |
+| 17    | 357s  | 0.21475 | 5.2738 | 195.1      | 178.4         |
+| 18    | 281s  | 0.17180 | 5.2688 | 194.2      | 177.5         |
+| 19    | 286s  | 0.13744 | 5.2632 | 193.1      | 177.0         |
+| 20    | 273s  | 0.10995 | 5.2616 | 192.8      | 176.3         |
+| 21    | 277s  | 0.08796 | 5.2613 | 192.7      | 176.0         |
+| 22    | 288s  | 0.07037 | 5.2573 | 192.0      | 175.8         |
+| 23    | 287s  | 0.05629 | 5.2559 | 191.7      | 175.4         |
+| 24    | 269s  | 0.04504 | 5.2547 | 191.5      | 175.2         |
+| 25    | 265s  | 0.03603 | 5.2539 | 191.3      | 175.2         |
+| 26    | 265s  | 0.02882 | 5.2520 | 190.9      | 175.0         |
+| 27    | 262s  | 0.02306 | 5.2519 | 190.9      | 174.9         |
+| 28    | 274s  | 0.01845 | 5.2509 | 190.7      | 174.8         |
+| 29    | 275s  | 0.01476 | 5.2505 | 190.7      | 174.8         |
+| 30    | 269s  | 0.01181 | 5.2499 | 190.6      | 174.7         |
+
+### Métricas finais
+
+| Métrica               | Valor        |
+| --------------------- | ------------ |
+| PPL Treino (época 30) | 190.6        |
+| PPL Validação         | 174.7        |
+| PPL Teste             | 168.01       |
+| Early stopping        | não acionado |
+
+### Gráfico
+
+![Resultados LSTM 2 Camadas](resultados_lstm_2camadas.png)
+
+### Análise
+
+A PPL de validação melhorou monotonicamente em todas as 30 épocas, por isso o early stopping não foi acionado. A PPL de treino maior que a de validação (190.6 vs 174.7) é efeito esperado do dropout. Na avaliação, o dropout é desativado. O decaimento agressivo do LR (de 2.0 para 0.01 ao longo de 22 épocas) fez o progresso desacelerar progressivamente, com ganhos marginais nas últimas épocas.
 
 ---
 
-### Análise dos resultados
+## Comparação entre os modelos
 
-- A Rede 2 convergiu de forma mais suave que a Rede 1, atingindo
-  97% de acurácia já na época 7 e estabilizando em torno de 97.8%
-  a partir da época 13. Não teve quedas bruscas durante o processo.
+| Métrica             | Modelo 1 (SGD)      | Modelo 2 (Adam)   | Modelo 3 (SGD + Dropout + 2 camadas) |
+| ------------------- | ------------------- | ----------------- | ------------------------------------ |
+| Otimizador          | SGD + decaimento LR | Adam + early stop | SGD + decaimento LR                  |
+| Camadas LSTM        | 1                   | 1                 | 2                                    |
+| Dropout             | não                 | não               | p=0.35                               |
+| Épocas treinadas    | 15                  | ~24               | 30                                   |
+| PPL Treino final    | 183.4               | ~75               | 190.6                                |
+| PPL Validação final | 200.1               | ~131              | 174.7                                |
+| **PPL Teste**       | 192.30              | **131.8**         | 168.01                               |
 
-- O custo de teste caiu de forma mais consistente do que na Rede 1,
-  estabilizando em torno de 0.07 a partir da época 13. E o custo de
-  teste ainda estava caindo na época 20 ao contrário da Rede 1 onde
-  o custo de teste estabilizou mais cedo. Pode ser que com algumas
-  épocas a mais, isso melhore.
-
-- A rede 2 segue a mesma tendência da rede 1, confirmando que o dígito 1 (F1: 99.03%)
-  é o mais fácil de reconhecer.
-- Pra rede 2, a pior classe foi o dígito 8 (F1: 96.98%),
-  confundido com outros dígitos de curvas similares como 3 e 5.
-- Na rede 2, o dígito 4 (F1: 98.41%) teve uma melhoria significativa
-  em relação à Rede 1 (97.82%)
-
-- Acurácia (97.87%) e ACA (97.86%) praticamente idênticas,
-  confirmando o balanceamento do dataset MNIST.
-
-- O valor de perplexidade (1.0683) é menor que o da Rede 1 (1.0872), indicando
-  que a Rede 2 está mais confiante nas suas predições.
-
----
-
-## Comparação entre as redes
-
-| Métrica            | Rede 1 (128→64, 30 épocas) | Rede 2 (256→128, 20 épocas) |
-| ------------------ | -------------------------- | --------------------------- |
-| Acurácia           | 97.81%                     | 97.87%                      |
-| ACA                | 97.79%                     | 97.86%                      |
-| F1 Médio           | 97.80%                     | 97.86%                      |
-| Perplexidade       | 1.0872                     | 1.0683                      |
-| Custo treino final | 0.0076                     | 0.0146                      |
-| Custo teste final  | 0.0836                     | 0.0661                      |
-| Épocas             | 30                         | 20                          |
-
-### Conclusão
-
-- A Rede 2 superou a Rede 1 em todas as métricas principais,
-  apesar de ter treinado por 10 épocas a menos, mas por pouca margem.
-
-- A Rede 1 tem um menor custo computacional e entrega um resultado parecido.
-
-- Aparece overfitting nas duas redes (um pouco maior na Rede 1 do que na Rede 2),
-  pode sugerir o uso de regularização, mas como a acurácia no teste foi boa em ambos os casos,
-  não comprometeu o desempenho geral.
+O Modelo 2 (Adam) obteve a melhor PPL de teste (131.8), com convergência mais rápida e early stopping evitando overfitting severo. O Modelo 3 (2 camadas + dropout) ficou em segundo (168.01), com regularização eficaz mas otimizador menos eficiente. O Modelo 1 (SGD base) serve como linha de base (192.30). Pode ser que uma boa combinação seria Adam + dropout + 2 camadas, mas não será possível a implementação neste trabalho devido ao tempo de execução.
